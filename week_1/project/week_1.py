@@ -67,7 +67,7 @@ def process_data(stocks: List[Stock]) -> Aggregation:
     return stock_agg
 
 @op(
-    ins={"aggregation": In:(dagster_type=Aggregation)},
+    ins={"aggregation": In(dagster_type=Aggregation)},
     description="Out with Stock agg to Redis"
 )
 
