@@ -1,5 +1,5 @@
 import csv
-# import heapq ## github.com/set92/corise-dagster/blob/master/week_1/project/week_1.py
+# import heapq
 from datetime import datetime
 from typing import List
 
@@ -59,7 +59,8 @@ def get_s3_data(context):
     description="Operation to output aggregate stock list"
 )
 def process_data(stocks: List[Stock]) -> Aggregation:
-# github.com/scottleechua/corise-dagster/blob/master/week_1/project/week_1.py    
+# github.com/scottleechua/corise-dagster/blob/master/week_1/project/week_1.py
+# github.com/set92/corise-dagster/blob/master/week_1/project/week_1.py    
     stock_high = max(stocks, key=lambda x :x.high)
     stock_agg = Aggregation(date=stock_high.date, high=stock_high.high)
     # max_stock = heapq.nlargest(1, stocks)[0]
