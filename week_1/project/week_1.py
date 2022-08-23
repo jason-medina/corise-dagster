@@ -1,4 +1,5 @@
 import csv
+# import heapq ## github.com/set92/corise-dagster/blob/master/week_1/project/week_1.py
 from datetime import datetime
 from typing import List
 
@@ -27,6 +28,9 @@ class Stock(BaseModel):
             low=float(input_list[5]),
         )
 
+def __lt__(self, other):
+        return self.high < other.high
+
 
 @usable_as_dagster_type(description="Aggregation of stock data")
 class Aggregation(BaseModel):
@@ -49,17 +53,33 @@ def get_s3_data(context):
             output.append(stock)
     return output
 
+@op(
+    ins={"stocks": In(dagster_type=List[Stock])},
+    out={"aggregation": Out(dagster_type=Aggregation)},
+    description="Operation to output aggregate stock list"
+)
+def process_data(stocks: List[Stock]) -> Aggregation:
+# github.com/scottleechua/corise-dagster/blob/master/week_1/project/week_1.py    
+    stock_high = max(stocks, key=lambda x :x.high)
+    stock_agg = Aggregation(date=stock_high.date, high=stock_high.high)
+    # max_stock = heapq.nlargest(1, stocks)[0]
+    # return Aggregation(date=max_stock.date, high=max_stock.high)
+    return stock_agg
 
-@op
-def process_data():
-    pass
+@op(
+    ins={"aggregation": In:(dagster_type=Aggregation)},
+    description="Out with Stock agg to Redis"
+)
 
-
-@op
-def put_redis_data():
-    pass
+@op(
+    description = "Unload Aggregation to Redis",
+    tags={"kind": "redis"})
+def put_redis_data(aggregation: Aggregation) -> None:
+    pass    
 
 
 @job
 def week_1_pipeline():
+    data = process_data(get_s3_data())
+    put_redis_data(data)
     pass
