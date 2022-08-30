@@ -58,10 +58,8 @@ def get_s3_data(context):
     out={"aggregation": Out(dagster_type=Aggregation)},
     description="Operation to output aggregate stock list"
 )
-def process_data(stocks: List[Stock]) -> Aggregation:
-# github.com/scottleechua/corise-dagster/blob/master/week_1/project/week_1.py
-# github.com/set92/corise-dagster/blob/master/week_1/project/week_1.py    
-    stock_high = max(stocks, key=lambda x :x.high)
+def process_data(stocks: List[Stock]) -> Aggregation:  
+    stock_high = max(stocks, key=lambda x: x.high)
     stock_agg = Aggregation(date=stock_high.date, high=stock_high.high)
     # max_stock = heapq.nlargest(1, stocks)[0]
     # return Aggregation(date=max_stock.date, high=max_stock.high)
@@ -69,12 +67,9 @@ def process_data(stocks: List[Stock]) -> Aggregation:
 
 @op(
     ins={"aggregation": In(dagster_type=Aggregation)},
+    tags={"kind": "redis"},
     description="Out with Stock agg to Redis"
 )
-
-@op(
-    description = "Unload Aggregation to Redis",
-    tags={"kind": "redis"})
 def put_redis_data(aggregation: Aggregation) -> None:
     pass    
 
