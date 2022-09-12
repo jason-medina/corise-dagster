@@ -4,7 +4,7 @@ from dagster import In, Nothing, Out, ResourceDefinition, graph, op
 from dagster_ucr.project.types import Aggregation, Stock
 from dagster_ucr.resources import mock_s3_resource, redis_resource, s3_resource
 
-
+"""
 @op(
     config_schema={"s3_key": str},
     required_resource_keys={"s3"},
@@ -16,7 +16,6 @@ def get_s3_data(context):
     stocks = context.resources.s3.get_data(context.op_config["s3_key"])
     return [Stock.from_list(stock) for stock in stocks]
 
-
 @op(
     ins={"stocks": In(dagster_type=List[Stock])},
     out={"aggregation": Out(dagster_type=Aggregation)},
@@ -24,20 +23,53 @@ def get_s3_data(context):
 )
 def process_data(stocks: List[Stock]) -> Aggregation:
     stock_high = max(stocks, key=lambda x: x.high)
-    stock_agg = Aggregation(date=stock_high.date, high=stock_high.high)
-    return stock_agg
+    return Aggregation(date=stock_high.date, high=stock_high.high)
 
 
 @op(
-    ins={"aggregation": In(dagster_type=Aggregation)},
+    ins={"stock_high": In(dagster_type=Aggregation)},
     required_resource_keys={"redis"},
-    out=Out(Nothing),
     tags={"kind": "redis"},
     description="Out with Stock agg to Redis"
 )
-def put_redis_data(context, stock_high: Aggregation):
-     context.resources.redis.put_data(str(stock_high.date), str(stock_high.high))
+def put_redis_data(context, stock_high):
+    context.resources.redis.put_data(aggregations.date.strftime("%m/%d/%Y"), str(aggregations.high))
+"""
 
+@op(
+    out={"stocks": Out(dagster_type=List[Stock])},
+    required_resource_keys={"s3"},
+    tags={"kind": "s3"},
+    description="Get a list of stocks from an S3 file",
+)
+def get_s3_data(context):
+    stocks = list()
+    key = context.op_config["s3_key"]
+    for row in context.resources.s3.get_data(key):
+        stock = Stock.from_list(row)
+        stocks.append(stock)
+    return stocks
+
+
+@op(
+    ins={"stocks": In(dagster_type=List[Stock])},
+    out={"aggregation": Out(dagster_type=Aggregation)},
+    tags={"kind": "transformation"},
+    description="Find the largest stock value",
+)
+def process_data(stocks):
+    big_stock = max(stocks, key=lambda x:x.high)
+    return Aggregation(date=big_stock.date, high=big_stock.high)
+
+
+@op(
+    ins={"aggregations": In(dagster_type=Aggregation)},
+    required_resource_keys={"redis"},
+    tags={"kind":"redis"},
+    description="Loads aggregations into redis cache",
+)
+def put_redis_data(context, aggregations):
+    context.resources.redis.put_data(aggregations.date.strftime("%m/%d/%Y"), str(aggregations.high))
 
 @graph
 def week_2_pipeline():
